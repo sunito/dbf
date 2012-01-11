@@ -17,3 +17,6 @@ require 'dbf/memo/base'
 require 'dbf/memo/dbase3'
 require 'dbf/memo/dbase4'
 require 'dbf/memo/foxpro'
+
+require 'bindata'
+require 'dbf/binary/header'
