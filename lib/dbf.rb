@@ -6,6 +6,10 @@ if CSV.const_defined? :Reader
   require 'fastercsv'
 end
 
+require 'bindata'
+require 'dbf/binary/field_descriptor'
+require 'dbf/binary/header'
+
 require 'dbf/util'
 require 'dbf/attributes'
 require 'dbf/record'

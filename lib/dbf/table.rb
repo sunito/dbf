@@ -5,8 +5,6 @@ module DBF
   class Table
     include Enumerable
 
-    DBF_HEADER_SIZE = 32
-
     VERSIONS = {
       "02" => "FoxBase",
       "03" => "dBase III without memo file",
@@ -31,10 +29,6 @@ module DBF
       "fb" => "FoxPro without memo file"
     }
 
-    attr_reader   :version              # Internal dBase version number
-    attr_reader   :record_count         # Total number of records
-    attr_accessor :encoding             # Source encoding (for ex. :cp1251)
-
     # Opens a DBF::Table
     # Examples:
     #   # working with a file stored on the filesystem
@@ -53,7 +47,7 @@ module DBF
     # @param [optional String, StringIO] memo Path to the memo file or a StringIO object
     def initialize(data, memo = nil)
       @data = open_data(data)
-      get_header_info
+      @header = Binary::Header.read(@data)
       @memo = open_memo(data, memo)
     end
     
@@ -80,7 +74,7 @@ module DBF
     #
     # @yield [nil, DBF::Record]
     def each
-      @record_count.times {|i| yield record(i)}
+      record_count.times {|i| yield record(i)}
     end
 
     # Retrieve a record by index number.
@@ -90,9 +84,9 @@ module DBF
     # @param [Fixnum] index
     # @return [DBF::Record, NilClass]
     def record(index)
-      seek(index * @record_length)
+      seek(index * @header.record_length)
       if !deleted_record?
-        DBF::Record.new(@data.read(@record_length), columns, version, @memo)
+        DBF::Record.new(@data.read(@header.record_length), columns, version, @memo)
       end
     end
 
@@ -186,12 +180,18 @@ module DBF
     # Retrieves column information from the database
     def columns
       @columns ||= begin
-        @data.seek(DBF_HEADER_SIZE)
         columns = []
-        column_count.times do
-          name, type, length, decimal = @data.read(32).unpack('a10 x a x4 C2')
-          if length > 0
-            columns << column_class.new(name.strip, type, length, decimal, version, @encoding)
+        @header.field_descriptors.each do |field_descriptor|
+          if field_descriptor.data_length > 0
+            column = column_class.new(
+              field_descriptor.clean_name, 
+              field_descriptor.data_type.value, 
+              field_descriptor.data_length.value, 
+              field_descriptor.decimal.value, 
+              version, 
+              encoding
+            )
+            columns << column
           end
         end
         columns
@@ -203,7 +203,19 @@ module DBF
     end
     
     def foxpro?
-      FOXPRO_VERSIONS.keys.include? @version
+      FOXPRO_VERSIONS.keys.include? version
+    end
+    
+    def version
+      @version ||= @header.version_hex
+    end
+    
+    def record_count
+      @record_count ||= @header.record_count
+    end
+    
+    def encoding
+      @encoding ||= self.class.encodings[encoding_key] if supports_encoding?
     end
 
     private
@@ -220,16 +232,12 @@ module DBF
       @memo_class ||= if foxpro?
         Memo::Foxpro
       else
-        if @version == "83"
+        if version == "83"
           Memo::Dbase3
         else
           Memo::Dbase4
         end
       end
-    end
-    
-    def column_count #nodoc
-      @column_count ||= ((@header_length - DBF_HEADER_SIZE + 1) / DBF_HEADER_SIZE).to_i
     end
 
     def open_data(data) #nodoc
@@ -267,19 +275,13 @@ module DBF
     def deleted_record? #nodoc
       @data.read(1).unpack('a') == ['*']
     end
-
-    def get_header_info #nodoc
-      @data.rewind
-      @version, @record_count, @header_length, @record_length, @encoding_key = read_header
-      @encoding = self.class.encodings[@encoding_key] if supports_encoding?
-    end
     
-    def read_header #nodoc
-      @data.read(DBF_HEADER_SIZE).unpack("H2 x3 V v2 x17H2")
+    def encoding_key #nodoc
+      @encoding_key ||= @header.code_page_hex
     end
 
     def seek(offset) #nodoc
-      @data.seek @header_length + offset
+      @data.seek @header.header_length + offset
     end
 
     def csv_class #nodoc

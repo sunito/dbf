@@ -203,13 +203,13 @@ describe DBF::Table do
   end
 
   describe 'when requiring mathn' do
-    describe 'column_count' do
+    describe 'field_count' do
       let(:table) { DBF::Table.new "#{DB_PATH}/dbase_03.dbf" }
 
       it 'returns an integer' do
         lambda do
           require 'mathn'
-          table.send(:column_count)
+          table.instance_eval {@header.field_count}
         end.call.should == 31
       end
     end
