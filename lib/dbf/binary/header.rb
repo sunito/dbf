@@ -23,7 +23,7 @@ module DBF
       uint8 :mdx
       uint8 :code_page
       skip :length => 2
-      array :field_descriptors, :type => :field_descriptor, :initial_length => :field_count
+      array :field_descriptors, :type => :field_descriptor, :read_until => lambda {index == field_count - 1}
   
       def version_hex
         version.to_i.to_s(16).rjust(2, '0')
