@@ -66,6 +66,8 @@ end
 # creating this function was found on this website: 
 # http://www.clicketyclick.dk/databases/xbase/format/dbf.html
 #
+require 'iconv'
+
 def dbf_writer(filename, fields, records)
 
   File.open(filename, 'w') do |dbf|
