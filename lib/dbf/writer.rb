@@ -1,10 +1,85 @@
 # To change this template, choose Tools | Templates
 # and open the template in the editor.
 
+
+require 'iconv'
+
 module DBF
   class Writer
-    def initialize
-      
+    def initialize(file_name, fields)
+      @file_name = file_name
+      @fields = fields
+    end
+    
+    def write(records)
+      write_header(records.size)
+      records.each do |record|
+        @dbf_file.write(' ')
+
+        @fields.each do |f|
+          value = record[f[:field_name].to_sym]
+
+          if f[:field_type] == 'N'
+            value = Iconv.conv('CP1250', 'UTF-8', value.to_s.rjust(f[:field_size], ' '))
+          else
+            value = Iconv.conv('CP1250', 'UTF-8', value.to_s[0,f[:field_size]].ljust(f[:field_size], ' '))
+          end
+
+
+          if value.length != f[:field_size]
+            raise "Record too long"
+          end
+
+          # Write value
+          @dbf_file.write(value)
+
+        end # fields.each
+      end
+      close
+    end
+    
+    def write_header(rec_num)
+      @dbf_file = File.open(@file_name, 'w') 
+      now = Time.now()
+      numfields = @fields.length
+
+      # Header Info
+      header = Array.new
+      header << 3                                         # Version
+      header << now.year-1900                             # Year
+      header << now.month                                 # Month
+      header << now.day                                   # Day
+      header << rec_num                            # Number of records
+      header << (numfields * 32 + 33)                     # The length of the header
+      x = 0
+      @fields.each { |f| x+=f[:field_size] }
+      header << x + 1                                     # The length of each record
+
+      hdr = header.pack('CCCCVvvxxxxxxxxxxxxxxxxxxxx')
+
+      # Write out the header
+      @dbf_file.write(hdr)
+
+      @fields.each do |f|                                  
+        field = Array.new
+        field << f[:field_name].ljust(11, "\x00")
+        field << f[:field_type][0]
+        field << f[:field_size]
+        field << f[:decimals]
+        fld = field.pack('a11cxxxxCCxxxxxxxxxxxxxx')
+
+        # Write out field descriptor
+        @dbf_file.write(fld)
+      end      
+
+      # Write terminator '\r'
+      @dbf_file.write("\r")
+    end # write_header  
+    
+    def close
+      # Write end of file '\x1A'
+      @dbf_file.write("\x1A")
+      @dbf_file.close
     end
   end
 end
@@ -66,7 +141,6 @@ end
 # creating this function was found on this website: 
 # http://www.clicketyclick.dk/databases/xbase/format/dbf.html
 #
-require 'iconv'
 
 def dbf_writer(filename, fields, records)
 
