@@ -4,17 +4,33 @@
 
 require 'iconv'
 
+require File.expand_path('../table', __FILE__)
+
+if not Array.instance_methods.map(&:to_s).include?("sum")
+  class Array
+    def sum
+      slice(1..-1).inject(yield(first)) do |s, value|
+        s + yield(value)
+      end
+    end
+  end
+
+end
+
+
 module DBF
-  class Writer
+  class WriTable < Table
     def initialize(file_name, fields)
       @file_name = file_name
       @fields = fields
+      @column_count = @fields.size
+      @data = StringIO.new
     end
     
     def write(records)
       write_header(records.size)
       records.each do |record|
-        @dbf_file.write(' ')
+        @data.write(' ')
 
         @fields.each do |f|
           value = record[f[:field_name].to_sym]
@@ -31,34 +47,40 @@ module DBF
           end
 
           # Write value
-          @dbf_file.write(value)
+          @data.write(value)
 
         end # fields.each
       end
-      close
+      finish
     end
     
     def write_header(rec_num)
-      @dbf_file = File.open(@file_name, 'w') 
+      @data.rewind
+      @version = 3
+      @record_count = rec_num
+
+      fixed_header_size = 32
+      @header_length = DBF_HEADER_SIZE + @column_count * 32 + 1     # The length of the header
+      @record_length = 1 + @fields.sum { |f| f[:field_size] }
+      #@encoding_key 
+      #@encoding = ENCODINGS[@encoding_key] if supports_encoding?
+      
       now = Time.now()
-      numfields = @fields.length
 
       # Header Info
       header = Array.new
-      header << 3                                         # Version
+      header << @version                                         # Version
       header << now.year-1900                             # Year
       header << now.month                                 # Month
       header << now.day                                   # Day
-      header << rec_num                            # Number of records
-      header << (numfields * 32 + 33)                     # The length of the header
-      x = 0
-      @fields.each { |f| x+=f[:field_size] }
-      header << x + 1                                     # The length of each record
+      header << @record_count                            # Number of records
+      header << @header_length
+      header << @record_length                           # The length of each record
 
       hdr = header.pack('CCCCVvvxxxxxxxxxxxxxxxxxxxx')
 
       # Write out the header
-      @dbf_file.write(hdr)
+      @data.write(hdr)
 
       @fields.each do |f|                                  
         field = Array.new
@@ -69,17 +91,20 @@ module DBF
         fld = field.pack('a11cxxxxCCxxxxxxxxxxxxxx')
 
         # Write out field descriptor
-        @dbf_file.write(fld)
+        @data.write(fld)
       end      
 
       # Write terminator '\r'
-      @dbf_file.write("\r")
+      @data.write("\r")
     end # write_header  
     
-    def close
+    def finish
       # Write end of file '\x1A'
-      @dbf_file.write("\x1A")
-      @dbf_file.close
+      @data.write("\x1A")
+      
+      File.open(@file_name, 'w') do |f|
+        f.write(@data.string)
+      end
     end
   end
 end

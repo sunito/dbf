@@ -4,7 +4,7 @@
 require File.expand_path('../../../lib/dbf/writer', __FILE__)
 
 module DBF
-  describe Writer do
+  describe WriTable do
     before(:all) do
       @dbf_file_name = "#{File.dirname(File.dirname(__FILE__))}/tmp/proba.dbf"      
     end
@@ -20,7 +20,7 @@ module DBF
         {:field_name=>'LOCZIP', :field_size=>20, :field_type=>'C', :decimals=>0}
       ]
       
-      @writer = Writer.new(@dbf_file_name, @fields)
+      @writer = WriTable.new(@dbf_file_name, @fields)
     end
 
     it "should work" do
@@ -47,7 +47,7 @@ module DBF
       ]
  
       @writer.write(records)
-      
+
       File.read(@dbf_file_name).should == File.read("#{File.dirname(File.dirname(__FILE__))}/fixtures/writer/simple1_6fields3records.dbf")
     end
   end
