@@ -69,10 +69,10 @@ end
 def dbf_writer(filename, fields, records)
 
   File.open(filename, 'w') do |dbf|
-    
+
     now = Time.now()
     numfields = fields.length
-    
+
     # Header Info
     header = Array.new
     header << 3                                         # Version
@@ -86,53 +86,53 @@ def dbf_writer(filename, fields, records)
     header << x + 1                                     # The length of each record
 
     hdr = header.pack('CCCCVvvxxxxxxxxxxxxxxxxxxxx')
-    
+
     # Write out the header
     dbf.write(hdr)
-    
+
     fields.each do |f|                                  
       field = Array.new
       field << f[:field_name].ljust(11, "\x00")
       field << f[:field_type][0]
       field << f[:field_size]
       field << f[:decimals]
-      fld = field.pack('a11cxxxxCCxxxxxxxxxxxxxx') 
-      
+      fld = field.pack('a11cxxxxCCxxxxxxxxxxxxxx')
+
       # Write out field descriptor
       dbf.write(fld)
     end
-    
+
     # Write terminator '\r'
     dbf.write("\r")
-    
+
     records.each do |r|
       # Write deletion flag
       dbf.write(' ')
-      
+
       fields.each do |f|
         value = r[f[:field_name].to_sym]
 
         if f[:field_type] == 'N'
-          value = value.to_s.rjust(f[:field_size], ' ')
+          value = Iconv.conv('CP1250', 'UTF-8', value.to_s.rjust(f[:field_size], ' '))
         else
-          value = value.to_s[0,f[:field_size]].ljust(f[:field_size], ' ')
+          value = Iconv.conv('CP1250', 'UTF-8', value.to_s[0,f[:field_size]].ljust(f[:field_size], ' '))
         end
-        
+
+
         if value.length != f[:field_size]
           raise "Record too long"
         end
 
         # Write value
         dbf.write(value)
-        
+
       end # fields.each
     end # records.each
-    
+
     # Write end of file '\x1A'
     dbf.write("\x1A")
-    
+
   end # File.open
-  
 end
 
 
