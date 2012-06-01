@@ -7,6 +7,7 @@ require 'iconv'
 require File.expand_path('../table', __FILE__)
 require File.expand_path('../column/base', __FILE__)
 require File.expand_path('../column/dbase', __FILE__)
+require File.expand_path('../record', __FILE__)
 
 if not Array.instance_methods.map(&:to_s).include?("sum")
   class Array
@@ -24,24 +25,34 @@ module DBF
   class WriTable < Table
     def initialize(file_name_or_stringio, column_defs = nil)
       # if file_name_or_stringio
-      @data = if file_name_or_stringio.is_a?(StringIO) 
-        file_name_or_stringio
-      elsif File.exist?(file_name_or_stringio)
-        # open_data(file_name_or_stringio)
-        @data = File.open(file_name_or_stringio, 'r+b')
-      else
-        raise "File name expected, got #{file_name_or_stringio.inspect}" unless file_name_or_stringio.respond_to?(:upcase)
-        @data = File.open(file_name_or_stringio, "w+b")
-      end
+      
+      @data = init_data(file_name_or_stringio)
+      
+      get_header_info if @initial_data_present
       
       @column_defs = column_defs
             
     end
     
+    def init_data(file_name_or_stringio)      
+      if file_name_or_stringio.is_a?(StringIO) 
+        @initial_data_present = true
+        file_name_or_stringio
+      elsif File.exist?(file_name_or_stringio)
+        @initial_data_present = true
+        # open_data(file_name_or_stringio)
+        File.open(file_name_or_stringio, 'r+b')
+      else
+        @initial_data_present = false
+        raise "File name expected, got #{file_name_or_stringio.inspect}" unless file_name_or_stringio.respond_to?(:upcase)
+        File.open(file_name_or_stringio, "w+b")
+      end      
+    end
+    
     def write(records, column_defs = nil)
       column_defs ||= @column_defs 
       @columns = if column_defs.nil?
-        columns
+        columns        
         # Todo: raise better error  if no columns
       else
         column_defs.map do |f| 
@@ -196,78 +207,4 @@ end
 # creating this function was found on this website: 
 # http://www.clicketyclick.dk/databases/xbase/format/dbf.html
 #
-
-def dbf_writer(filename, fields, records)
-
-  File.open(filename, 'w') do |dbf|
-
-    now = Time.now()
-    numfields = fields.length
-
-    # Header Info
-    header = Array.new
-    header << 3                                         # Version
-    header << now.year-1900                             # Year
-    header << now.month                                 # Month
-    header << now.day                                   # Day
-    header << records.length                            # Number of records
-    header << (numfields * 32 + 33)                     # The length of the header
-    x = 0
-    fields.each { |f| x+=f[:field_size] }
-    header << x + 1                                     # The length of each record
-
-    hdr = header.pack('CCCCVvvxxxxxxxxxxxxxxxxxxxx')
-
-    # Write out the header
-    dbf.write(hdr)
-
-    fields.each do |f|                                  
-      field = Array.new
-      field << f[:field_name].ljust(11, "\x00")
-      field << f[:field_type][0]
-      field << f[:field_size]
-      field << f[:decimals]
-      fld = field.pack('a11cxxxxCCxxxxxxxxxxxxxx')
-
-      # Write out field descriptor
-      dbf.write(fld)
-    end
-
-    # Write terminator '\r'
-    dbf.write("\r")
-
-    records.each do |r|
-      # Write deletion flag
-      dbf.write(' ')
-
-      fields.each do |f|
-        value = r[f[:field_name].to_sym]
-
-        if f[:field_type] == 'N'
-          value = Iconv.conv('CP1250', 'UTF-8', value.to_s.rjust(f[:field_size], ' '))
-        else
-          value = Iconv.conv('CP1250', 'UTF-8', value.to_s[0,f[:field_size]].ljust(f[:field_size], ' '))
-        end
-
-
-        if value.length != f[:field_size]
-          raise "Record too long"
-        end
-
-        # Write value
-        dbf.write(value)
-
-      end # fields.each
-    end # records.each
-
-    # Write end of file '\x1A'
-    dbf.write("\x1A")
-
-  end # File.open
-end
-
-
-
-
-
 		

@@ -64,5 +64,28 @@ module DBF
       File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1)
     end
 
+    it "should write the same values that it has read" do
+      FileUtils.copy @fixt_dbf_fn_simple1, @dbf_file_name
+      
+      @writer = WriTable.new(@dbf_file_name)
+      recs = @writer.find(:all)
+      @writer.write(recs)
+      @writer.close
+
+      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1)
+    end
+
+    it "should correctly write modified records" do
+      FileUtils.copy @fixt_dbf_fn_simple1, @dbf_file_name
+      
+      @writer = WriTable.new(@dbf_file_name)
+      recs = @writer.find(:all)
+      recs[0].attributes["LOCID"] = 44
+      @writer.write(recs)
+      @writer.close
+
+      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1).sub(" 1My Place", "44My Place")
+    end
+
   end
 end
