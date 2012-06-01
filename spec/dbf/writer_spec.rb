@@ -7,7 +7,9 @@ module DBF
   describe WriTable do
     before(:all) do
       @dbf_file_name = "#{File.dirname(File.dirname(__FILE__))}/tmp/proba.dbf"      
+      @fixt_dbf_fn_simple1 = "#{File.dirname(File.dirname(__FILE__))}/fixtures/writer/simple1_6fields3records.dbf"
     end
+    
     before(:each) do
       File.delete(@dbf_file_name) if File.exist?(@dbf_file_name)
 
@@ -20,12 +22,7 @@ module DBF
         {:field_name=>'LOCZIP', :field_size=>20, :field_type=>'C', :decimals=>0}
       ]
       
-      @writer = WriTable.new(@dbf_file_name, @fields)
-    end
-
-    it "should work" do
- 
-      records = [
+      @records = [
         {:LOCID=>1,
           :LOCNAME=>'My Place', #ÁRVÍZTŰRŐ TÜKÖRFÚRÓGÉP árvíztűrő tükörfúrógép',
           :LOCADDR=>'LOCADDR1',
@@ -46,9 +43,26 @@ module DBF
           :LOCZIP=>'LOCZIP3'}
       ]
  
-      @writer.write(records)
-
-      File.read(@dbf_file_name).should == File.read("#{File.dirname(File.dirname(__FILE__))}/fixtures/writer/simple1_6fields3records.dbf")
     end
+
+    it "should create a non-existing file" do
+      @writer = WriTable.new(@dbf_file_name, @fields)
+ 
+      @writer.write(@records)
+      @writer.close
+
+      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1)
+    end
+      
+    it "should be able to read columns from an existing file" do
+      FileUtils.copy @fixt_dbf_fn_simple1, @dbf_file_name
+      
+      @writer = WriTable.new(@dbf_file_name)
+      @writer.write(@records)
+      @writer.close
+
+      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1)
+    end
+
   end
 end

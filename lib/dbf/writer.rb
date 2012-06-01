@@ -22,20 +22,38 @@ end
 
 module DBF
   class WriTable < Table
-    def initialize(file_name, fields)
-      @file_name = file_name
-      @columns = fields.map do |f| 
-        if f.is_a? Column::Dbase
-          f
-        else
-          Column::Dbase.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
+    def initialize(file_name_or_stringio, column_defs = nil)
+      # if file_name_or_stringio
+      @data = if file_name_or_stringio.is_a?(StringIO) 
+        file_name_or_stringio
+      elsif File.exist?(file_name_or_stringio)
+        # open_data(file_name_or_stringio)
+        @data = File.open(file_name_or_stringio, 'r+b')
+      else
+        raise "File name expected, got #{file_name_or_stringio.inspect}" unless file_name_or_stringio.respond_to?(:upcase)
+        @data = File.open(file_name_or_stringio, "w+b")
+      end
+      
+      @column_defs = column_defs
+            
+    end
+    
+    def write(records, column_defs = nil)
+      column_defs ||= @column_defs 
+      @columns = if column_defs.nil?
+        columns
+        # Todo: raise better error  if no columns
+      else
+        column_defs.map do |f| 
+          if f.is_a? Column::Dbase
+            f
+          else
+            Column::Dbase.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
+          end
         end
       end
       @column_count = @columns.size
-      @data = StringIO.new
-    end
-    
-    def write(records)
+      
       @record_count = records.size
       write_header
       records.each do |record|
@@ -110,9 +128,13 @@ module DBF
       # Write end of file '\x1A'
       @data.write("\x1A")
       
-      File.open(@file_name, 'w') do |f|
-        f.write(@data.string)
-      end
+#      File.open(@file_name, 'w') do |f|
+#        f.write(@data.string)
+#      end
+    end
+    
+    def close
+      @data.close
     end
   end
 end
