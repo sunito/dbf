@@ -5,6 +5,8 @@
 require 'iconv'
 
 require File.expand_path('../table', __FILE__)
+require File.expand_path('../column/base', __FILE__)
+require File.expand_path('../column/dbase', __FILE__)
 
 if not Array.instance_methods.map(&:to_s).include?("sum")
   class Array
@@ -22,27 +24,34 @@ module DBF
   class WriTable < Table
     def initialize(file_name, fields)
       @file_name = file_name
-      @fields = fields
-      @column_count = @fields.size
+      @columns = fields.map do |f| 
+        if f.is_a? Column::Dbase
+          f
+        else
+          Column::Dbase.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
+        end
+      end
+      @column_count = @columns.size
       @data = StringIO.new
     end
     
     def write(records)
-      write_header(records.size)
+      @record_count = records.size
+      write_header
       records.each do |record|
         @data.write(' ')
 
-        @fields.each do |f|
-          value = record[f[:field_name].to_sym]
+        @columns.each do |c|
+          value = record[c.name.to_sym]
 
-          if f[:field_type] == 'N'
-            value = Iconv.conv('CP1250', 'UTF-8', value.to_s.rjust(f[:field_size], ' '))
+          if c.type == 'N'
+            value = Iconv.conv('CP1250', 'UTF-8', value.to_s.rjust(c.length, ' '))
           else
-            value = Iconv.conv('CP1250', 'UTF-8', value.to_s[0,f[:field_size]].ljust(f[:field_size], ' '))
+            value = Iconv.conv('CP1250', 'UTF-8', value.to_s[0,c.length].ljust(c.length, ' '))
           end
 
 
-          if value.length != f[:field_size]
+          if value.length != c.length
             raise "Record too long"
           end
 
@@ -54,14 +63,13 @@ module DBF
       finish
     end
     
-    def write_header(rec_num)
+    def write_header  #(record_count)
       @data.rewind
       @version = 3
-      @record_count = rec_num
 
       fixed_header_size = 32
       @header_length = DBF_HEADER_SIZE + @column_count * 32 + 1     # The length of the header
-      @record_length = 1 + @fields.sum { |f| f[:field_size] }
+      @record_length = 1 + @columns.sum(&:length)
       #@encoding_key 
       #@encoding = ENCODINGS[@encoding_key] if supports_encoding?
       
@@ -82,12 +90,12 @@ module DBF
       # Write out the header
       @data.write(hdr)
 
-      @fields.each do |f|                                  
+      @columns.each do |c|                                  
         field = Array.new
-        field << f[:field_name].ljust(11, "\x00")
-        field << f[:field_type][0]
-        field << f[:field_size]
-        field << f[:decimals]
+        field << c.name.ljust(11, "\x00")
+        field << c.type[0]
+        field << c.length
+        field << c.decimal
         fld = field.pack('a11cxxxxCCxxxxxxxxxxxxxx')
 
         # Write out field descriptor
