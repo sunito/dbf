@@ -2,3 +2,5 @@
 .bundle
 .rvmrc
 Gemfile.lock
+nbproject
+
