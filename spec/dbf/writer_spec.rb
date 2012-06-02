@@ -7,7 +7,10 @@ module DBF
   describe WriTable do
     before(:all) do
       @dbf_file_name = "#{File.dirname(File.dirname(__FILE__))}/tmp/proba.dbf"      
-      @fixt_dbf_fn_simple1 = "#{File.dirname(File.dirname(__FILE__))}/fixtures/writer/simple1_6fields3records.dbf"
+      @fixt_dbf_simple1_fn = "#{File.dirname(File.dirname(__FILE__))}/fixtures/writer/simple1_6fields3records.dbf"
+      @fixt_dbf_simple1_content = File.read(@fixt_dbf_simple1_fn)
+      t = Time.now
+      @fixt_dbf_simple1_content[1,3] = [t.year-1900, t.month, t.day].pack("CCC")
     end
     
     before(:each) do
@@ -51,32 +54,32 @@ module DBF
       @writer.write(@records)
       @writer.close
 
-      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1)
+      File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
     end
       
     it "should be able to read columns from an existing file" do
-      FileUtils.copy @fixt_dbf_fn_simple1, @dbf_file_name
+      FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
       
       @writer = WriTable.new(@dbf_file_name)
       @writer.write(@records)
       @writer.close
 
-      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1)
+      File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
     end
 
     it "should write the same values that it has read" do
-      FileUtils.copy @fixt_dbf_fn_simple1, @dbf_file_name
+      FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
       
       @writer = WriTable.new(@dbf_file_name)
       recs = @writer.find(:all)
       @writer.write(recs)
       @writer.close
 
-      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1)
+      File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
     end
 
     it "should correctly write modified records" do
-      FileUtils.copy @fixt_dbf_fn_simple1, @dbf_file_name
+      FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
       
       @writer = WriTable.new(@dbf_file_name)
       recs = @writer.find(:all)
@@ -84,7 +87,7 @@ module DBF
       @writer.write(recs)
       @writer.close
 
-      File.read(@dbf_file_name).should == File.read(@fixt_dbf_fn_simple1).sub(" 1My Place", "44My Place")
+      File.read(@dbf_file_name).should == @fixt_dbf_simple1_content.sub(" 1My Place", "44My Place")
     end
 
   end
