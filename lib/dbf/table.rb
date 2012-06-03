@@ -32,7 +32,7 @@ module DBF
     }
 
     attr_reader   :version              # Internal dBase version number
-    attr_reader   :record_count         # Total number of records
+    attr_reader   :total_record_count         # Total number of records
     attr_accessor :encoding             # Source encoding (for ex. :cp1251)
 
     # Opens a DBF::Table
@@ -80,9 +80,26 @@ module DBF
     #
     # @yield [nil, DBF::Record]
     def each
-      @record_count.times {|i| yield record(i)}
+      @total_record_count.times {|i| yield record(i)}
     end
 
+    # the number of active (not deleted) records
+    # 
+    # @return Integer
+    def record_count
+      @total_record_count - deleted_record_count
+    end
+    
+    # the number of active (not deleted) records
+    # 
+    # @return Integer
+    def deleted_record_count
+      @deleted_record_count ||= (0...@total_record_count).count do |i|
+        deleted_record?(i)
+      end
+    end
+        
+    
     # Retrieve a record by index number.
     # The record will be nil if it has been deleted, but not yet pruned from
     # the database.
@@ -90,8 +107,7 @@ module DBF
     # @param [Fixnum] index
     # @return [DBF::Record, NilClass]
     def record(index)
-      seek(index * @record_length)
-      if !deleted_record?
+      if !deleted_record?(index)
         DBF::Record.new(@data.read(@record_length), columns, version, @memo)
       end
     end
@@ -265,13 +281,14 @@ module DBF
       detect {|record| record && record.match?(options)}
     end
 
-    def deleted_record? #nodoc
+    def deleted_record?(index) #nodoc
+      seek(index * @record_length)
       @data.read(1).unpack('a') == ['*']
     end
 
     def get_header_info #nodoc
       @data.rewind
-      @version, @record_count, @header_length, @record_length, @encoding_key = read_header
+      @version, @total_record_count, @header_length, @record_length, @encoding_key = read_header
       @encoding = ENCODINGS[@encoding_key] if supports_encoding?
     end
     

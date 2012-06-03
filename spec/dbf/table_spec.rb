@@ -76,6 +76,20 @@ describe DBF::Table do
     end
   end
   
+  describe "#record_count" do
+    before do
+      @table = DBF::Table.new "#{DB_PATH}/dbase_03_delrec.dbf"
+    end
+    
+    it "return the correct record count" do
+      @table.record_count.should == 1
+    end    
+
+    it "return nil for the deleted records" do
+      @table.record(0).should be_nil
+    end    
+  end
+  
   describe "#record" do
     before do
       @table = DBF::Table.new "#{DB_PATH}/dbase_83.dbf"
