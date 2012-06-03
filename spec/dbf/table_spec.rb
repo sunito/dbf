@@ -96,7 +96,7 @@ describe DBF::Table do
     end
     
     it "return nil for deleted records" do
-      @table.stub!(:deleted_record?).and_return(true)
+      @table.stub!(:record_active?).and_return(nil)
       @table.record(5).should be_nil
     end
   end
@@ -107,7 +107,7 @@ describe DBF::Table do
     end
     
     it "should return nil for deleted records" do
-      @table.stub!(:deleted_record?).and_return(true)
+      @table.stub!(:record_active?).and_return(nil)
       @table.record(0).should be_nil
     end
   end

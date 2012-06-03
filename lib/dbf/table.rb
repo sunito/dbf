@@ -95,7 +95,7 @@ module DBF
     # @return Integer
     def deleted_record_count
       @deleted_record_count ||= (0...@total_record_count).count do |i|
-        deleted_record?(i)
+        record_active?(i)
       end
     end
         
@@ -107,8 +107,8 @@ module DBF
     # @param [Fixnum] index
     # @return [DBF::Record, NilClass]
     def record(index)
-      if !deleted_record?(index)
-        DBF::Record.new(@data.read(@record_length), columns, version, @memo)
+      record_active?(index) do |raw_data|
+        DBF::Record.new(raw_data, columns, version, @memo)
       end
     end
 
@@ -281,10 +281,23 @@ module DBF
       detect {|record| record && record.match?(options)}
     end
 
-    def deleted_record?(index) #nodoc
+    def record_active?(index) #nodoc
       seek(index * @record_length)
-      @data.read(1).unpack('a') == ['*']
+      if @data.read(1).unpack('a') == ['*'] # deletion marker
+        nil
+      else
+        if block_given?
+          yield @data.read(@record_length)
+        else
+          true
+        end
+      end
     end
+
+#    def deleted_record?(index) #nodoc
+#      seek(index * @record_length)
+#      @data.read(1).unpack('a') == ['*']
+#    end
 
     def get_header_info #nodoc
       @data.rewind
