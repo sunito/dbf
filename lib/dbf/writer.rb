@@ -4,12 +4,12 @@
 
 require 'iconv'
 
-require File.expand_path('../table', __FILE__)
-require File.expand_path('../column/base', __FILE__)
-require File.expand_path('../column/dbase', __FILE__)
-require File.expand_path('../record', __FILE__)
+#require File.expand_path('../table', __FILE__)
+#require File.expand_path('../column/base', __FILE__)
+#require File.expand_path('../column/dbase', __FILE__)
+#require File.expand_path('../record', __FILE__)
 
-if not Array.instance_methods.map(&:to_s).include?("sum")
+if not Array.instance_methods.map{|x|x.to_s}.include?("sum")
   class Array
     def sum
       slice(1..-1).inject(yield(first)) do |s, value|
