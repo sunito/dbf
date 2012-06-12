@@ -51,6 +51,27 @@ describe DBF::Record do
     end
   end
 
+  describe 'default accessor (Record#[])' do
+    let(:table) { DBF::Table.new "#{DB_PATH}/dbase_8b.dbf"}
+    let(:record) { table.find(0) }
+
+    it 'should accept the underscored column name' do
+      record[:character].should == 'One'
+      record["character"].should == 'One'
+      record[:float].should == 1.23456789012346
+      record["logical"].should == true
+    end
+
+    it 'should accept the original column name' do
+      record["CHARACTER"].should == 'One'
+      record[:CHARACTER].should == 'One'
+      record[:FLOAT].should == 1.23456789012346
+      record["LOGICAL"].should == true
+    end
+
+  end
+
+  
   describe 'column data for table' do
     let(:table) { DBF::Table.new "#{DB_PATH}/cp1251.dbf"}
 

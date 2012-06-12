@@ -40,8 +40,8 @@ module DBF
       key = key.to_s
       if attributes.has_key?(key)
         attributes[key]
-      elsif index = column_names.index(key)
-        attributes[@columns[index].name]
+      elsif index = original_column_names.index(key)
+        attributes[@columns[index].underscored_name]
       end
     end
     
@@ -71,6 +71,10 @@ module DBF
 
     def column_names
       @column_names ||= @columns.map {|column| column.underscored_name}
+    end
+    
+    def original_column_names
+      @original_column_names ||= @columns.map {|column| column.name}
     end
     
     def init_attribute(column) #nodoc
