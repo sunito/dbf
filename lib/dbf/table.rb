@@ -95,7 +95,7 @@ module DBF
     # @return Integer
     def deleted_record_count
       @deleted_record_count ||= (0...@total_record_count).count do |i|
-        record_active?(i)
+        not record_active?(i)
       end
     end
         
