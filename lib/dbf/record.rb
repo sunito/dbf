@@ -24,7 +24,7 @@ module DBF
     # 
     # @return [Array]
     def to_a
-      @columns.map {|column| attributes[column.name]}
+      @columns.map {|column| attributes[column.underscored_name]}
     end
     
     # Do all search parameters match?
@@ -49,7 +49,7 @@ module DBF
     def attributes
       @attributes ||= begin
         @data.rewind
-        ha = @columns.map {|column| [column.name, init_attribute(column)]}
+        ha = @columns.map {|column| [column.underscored_name, init_attribute(column)]}
         Hash[*ha.flatten]
       end
     end
@@ -61,7 +61,7 @@ module DBF
 
     def method_missing(method, *args)
       if index = column_names.index(method.to_s)
-        attributes[@columns[index].name]
+        attributes[@columns[index].underscored_name]
       else
         super
       end
