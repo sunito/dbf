@@ -226,8 +226,10 @@ describe DBF::Table do
     end
 
     it 'should have correct names' do
-      @table.columns.first.name.should == 'Point_ID'
-      @table.columns[29].name.should == 'Easting'
+      @table.columns.first.original_name.should == 'Point_ID'
+      @table.columns.first.name.should          == 'point_id'
+      @table.columns[29].original_name.should == 'Easting'
+      @table.columns[29].name.should          == 'easting'
     end
   end
 end

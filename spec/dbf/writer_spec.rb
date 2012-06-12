@@ -46,16 +46,31 @@ module DBF
           :LOCSTATE=>'LOCSTATE3',
           :LOCZIP=>'LOCZIP3'}
       ]
+      @records.each do |rec|
+        class << rec
+          alias old_access :[]
+          def [](key)
+            old_access(key.to_s.upcase.to_sym)
+          end
+        end
+      end
  
     end
 
-    it "should create a non-existing file" do
+    it "should create a non-existing dbf-file" do
       @writer = WriTable.new(@dbf_file_name, @fields)
  
       @writer.write(@records)
       @writer.close
 
       File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
+    end
+      
+    it "should not produce errors with a non-existing file" do
+      @writer = WriTable.new(@dbf_file_name, @fields)
+ 
+      @writer.find(:first, :LOCNAME=>'Blabla').should be_nil
+      @writer.close
     end
       
     it "should be able to read columns from an existing file" do
@@ -84,7 +99,7 @@ module DBF
       
       @writer = WriTable.new(@dbf_file_name)
       recs = @writer.find(:all)
-      recs[0].attributes["LOCID"] = 44
+      recs[0].attributes["locid"] = 44
       @writer.write(recs)
       @writer.close
 

@@ -5,8 +5,12 @@ describe DBF::Column::Dbase do
   context "when initialized" do
     let(:column) { DBF::Column::Dbase.new "ColumnName", "N", 1, 0, "30" }
     
-    it "sets the #name accessor" do
-      column.name.should == "ColumnName"
+    it "should set the #original_name accessor" do
+      column.original_name.should == "ColumnName"
+    end
+    
+    it "should return the underscored name through the #name method" do
+      column.name.should == "column_name"
     end
     
     it "sets the #type accessor" do
@@ -207,14 +211,14 @@ describe DBF::Column::Dbase do
   end
   
   context "#name" do    
-    it "contains only ASCII characters" do
+    it "should contain only ASCII characters" do
       column = DBF::Column::Dbase.new "--\x1F-\x68\x65\x6C\x6C\x6F world-\x80--", "N", 1, 0, "30"
-      column.name.should == "---hello world---"
+      column.original_name.should == "---hello world---"
     end
 
-    it "is truncated at the null character" do
+    it "should be truncated at the null character" do
       column = DBF::Column::Dbase.new "--\x1F-\x68\x65\x6C\x6C\x6F \x00 world-\x80--", "N", 1, 0, "30"
-      column.name.should == "---hello "
+      column.original_name.should == "---hello "
     end
   end
   

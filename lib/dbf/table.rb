@@ -4,6 +4,8 @@ module DBF
   # methods for enumerating and searching the records.
   class Table
     include Enumerable
+    
+    class InvalidHeader < StandardError; end
 
     DBF_HEADER_SIZE = 32
 
@@ -306,7 +308,14 @@ module DBF
     end
     
     def read_header #nodoc
-      @data.read(DBF_HEADER_SIZE).unpack("H2 x3 V v2 x17H2")
+      if @data.eof? 
+        raise InvalidHeader, "Missing table header"
+      end
+      begin
+        @data.read(DBF_HEADER_SIZE).unpack("H2 x3 V v2 x17H2")
+      rescue
+        raise InvalidHeader, "Cannot read table header. Message: " + $!.message
+      end
     end
 
     def seek(offset) #nodoc

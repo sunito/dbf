@@ -23,13 +23,18 @@ end
 
 module DBF
   class WriTable < Table
+    class InitError < StandardError; end
+    
     def initialize(file_name_or_stringio, column_defs = nil)
       # if file_name_or_stringio
       
       @data = init_data(file_name_or_stringio)
       
-      get_header_info if @initial_data_present
-      
+      if @initial_data_present
+        get_header_info 
+      else
+        @total_record_count = 0
+      end
       @column_defs = column_defs
             
     end
@@ -50,23 +55,11 @@ module DBF
     end
     
     def write(records, column_defs = nil)
-      column_defs ||= @column_defs 
-      @columns = if column_defs.nil?
-        columns        
-        # Todo: raise better error  if no columns
-      else
-        column_defs.map do |f| 
-          if f.is_a? Column::Dbase
-            f
-          else
-            Column::Dbase.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
-          end
-        end
-      end
-      @column_count = @columns.size
-      
+
+      store_column_defs(column_defs)
       @record_count = records.size
       write_header
+      
       records.each do |record|
         @data.write(' ')
 
@@ -92,8 +85,27 @@ module DBF
       finish
     end
     
+    def store_column_defs(column_defs = nil)
+      column_defs ||= @column_defs 
+      @columns = if column_defs.nil?
+        columns        
+        # Todo: raise better error  if no columns
+      else
+        column_defs.map do |f| 
+          if f.is_a? Column::Dbase
+            f
+          else
+            Column::Dbase.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
+          end
+        end
+      end
+      @column_count = @columns.size
+    end
+    
+
+    
+    
     def write_header  #(record_count)
-      @data.rewind
       @version = 3
 
       fixed_header_size = 32
@@ -116,12 +128,13 @@ module DBF
 
       hdr = header.pack('CCCCVvvxxxxxxxxxxxxxxxxxxxx')
 
+      @data.rewind
       # Write out the header
       @data.write(hdr)
 
       @columns.each do |c|                                  
         field = Array.new
-        field << c.name.ljust(11, "\x00")
+        field << c.original_name.ljust(11, "\x00")
         field << c.type[0]
         field << c.length
         field << c.decimal
