@@ -4,7 +4,7 @@ module DBF
     class NameError < StandardError; end
     
     class Base
-      attr_reader :name, :type, :length, :decimal
+      attr_reader :original_name, :type, :length, :decimal
 
       # Initialize a new DBF::Column
       #
@@ -13,10 +13,10 @@ module DBF
       # @param [Fixnum] length
       # @param [Fixnum] decimal
       def initialize(name, type, length, decimal, version, encoding=nil)
-        @name, @type, @length, @decimal, @version, @encoding = clean(name), type, length, decimal, version, encoding
+        @original_name, @type, @length, @decimal, @version, @encoding = clean(name), type, length, decimal, version, encoding
 
         raise LengthError, "field length must be greater than 0" unless length > 0
-        raise NameError, "column name cannot be empty" if @name.length == 0
+        raise NameError, "column name cannot be empty" if @original_name.length == 0
       end
 
       # Cast value to native type
@@ -58,8 +58,9 @@ module DBF
       end
 
       def underscored_name
-        @underscored_name ||= self.class.underscore_name(name)
+        @underscored_name ||= self.class.underscore_name(@original_name)
       end
+      alias_method :name, :underscored_name
 
       private
 

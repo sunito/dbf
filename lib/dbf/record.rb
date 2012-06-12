@@ -74,7 +74,7 @@ module DBF
     end
     
     def original_column_names
-      @original_column_names ||= @columns.map {|column| column.name}
+      @original_column_names ||= @columns.map {|column| column.original_name}
     end
     
     def init_attribute(column) #nodoc
