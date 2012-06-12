@@ -47,9 +47,11 @@ module DBF
     
     # @return [Hash]
     def attributes
-      @data.rewind
-      ha = @columns.map {|column| [column.name, init_attribute(column)]}
-      @attributes ||= Hash[*ha.flatten]
+      @attributes ||= begin
+        @data.rewind
+        ha = @columns.map {|column| [column.name, init_attribute(column)]}
+        Hash[*ha.flatten]
+      end
     end
     
     def respond_to?(method, *args)
