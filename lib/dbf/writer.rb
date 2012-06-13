@@ -128,11 +128,11 @@ module DBF
         end
         # Todo: raise better error  if no columns
       else
-        column_defs.map do |f| 
-          if f.is_a? Column::Base
-            f
+        column_defs.map do |c| 
+          if c.is_a? Column::Base
+            c.dup
           else
-            column_class.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
+            column_class.new(c[:field_name], c[:field_type], c[:field_size], c[:decimals], 3)
           end
         end
       end
