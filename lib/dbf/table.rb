@@ -6,6 +6,7 @@ module DBF
     include Enumerable
     
     class InvalidHeader < StandardError; end
+    class NotYetImplementedError < StandardError; end
 
     DBF_HEADER_SIZE = 32
 
@@ -76,7 +77,16 @@ module DBF
     def filename
       File.basename @data.path
     end
-
+    
+    # Will enable index-enhanced find operations
+    # 
+    # @param [Array] keys
+    def add_index(keys)
+      keys_unikey = array_to_unikey(keys)
+      @indexes ||= {}
+      @indexes[keys_unikey] = Hash.new
+    end
+    
     # Calls block once for each record in the table. The record may be nil
     # if the record has been marked as deleted.
     #
@@ -280,9 +290,44 @@ module DBF
     end
 
     def find_first(options) #nodoc
+      if @indexes         
+        index_unikey = array_to_unikey(options.keys)
+        record_index = @indexes[index_unikey]
+        if record_index 
+          fill_index(index_unikey) if record_index.empty?
+          return record_index[hash_to_unikey(options)]
+        end
+      end
       detect {|record| record && record.match?(options)}
     end
+    
+    def fill_index(index_unikey)
+      record_index = @indexes[index_unikey]
+      each do |record|
+        next unless record
+        unikey = record_to_unikey(index_unikey, record)            
+        if record_index.has_key?(unikey)
+          raise NotYetImplementedError, "index currently only implemented for unique keys (index: #{record_index}, keyval: #{unikey}"
+        end
+        record_index[unikey] = record
+      end
+    end          
 
+
+    def array_to_unikey(array)
+      array.map{|k|k.to_s.downcase}.sort.join("\n")
+    end
+
+    def hash_to_unikey(hash)
+      downcase_hash = Hash[*hash.map{|k,v| [k.to_s.downcase, v] }.flatten]
+      record_to_unikey(array_to_unikey(hash.keys), downcase_hash)
+    end
+
+    def record_to_unikey(key_names, record)
+      key_names = key_names.split unless key_names.respond_to?(:map)       
+      key_names.map { |name| record[name.strip.downcase] }.join("\n")
+    end
+    
     def record_active?(index) #nodoc
       seek(index * @record_length)
       if @data.read(1).unpack('a') == ['*'] # deletion marker

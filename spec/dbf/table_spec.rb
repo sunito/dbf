@@ -1,6 +1,34 @@
 require "spec_helper"
 
 describe DBF::Table do  
+  ["without_index", "with_index"].each do |index_mode|
+  describe index_mode do
+    
+  before :all do
+    if index_mode == "with_index"
+      class << DBF::Table
+        alias_method :new_without_index, :new
+        #remove_method :new
+        define_method :new do |*args|
+          new_table = new_without_index(*args)
+          new_table.add_index(["code"])
+          new_table.add_index(["vsnr"])
+          new_table.add_index(["catcount", "image"])
+          new_table.add_index(["id", "image"])
+          new_table
+        end
+      end
+    end
+  end
+  
+  after :all do
+    if index_mode == "with_index"
+      class << DBF::Table
+        alias_method :new, :new_without_index
+      end
+    end
+  end
+  
   specify 'foxpro versions' do
     DBF::Table::FOXPRO_VERSIONS.keys.sort.should == %w(30 31 f5 fb).sort
   end
@@ -76,17 +104,21 @@ describe DBF::Table do
     end
   end
   
-  describe "#record_count" do
+  describe "with deleted record" do
     before do
       @table = DBF::Table.new "#{DB_PATH}/dbase_03_delrec.dbf"
     end
     
-    it "return the correct record count" do
+    it "should return the correct record count" do
       @table.record_count.should == 1
     end    
 
-    it "return nil for the deleted records" do
+    it "should return nil for the deleted records" do
       @table.record(0).should be_nil
+    end    
+
+    it "should find the undeleted record" do
+      @table.find(:first, :vsnr => "GK_715").should_not be_nil
     end    
   end
   
@@ -189,11 +221,33 @@ describe DBF::Table do
       end
 
       it "should AND multiple search terms" do
-        @table.find(:first, "ID" => 30, "IMAGE" => "graphics/00000001/TBC01.jpg").should be_nil
+        @table.find(:all, "IMAGE" => "graphics/00000001/TBC01.jpg").size.should > 0
+        
+        @table.find(:first, "catcount" => 3, "IMAGE" => "graphics/00000001/TBC01.jpg").should_not be_nil
+        @table.find(:first, "catcount" => 111111, "IMAGE" => "graphics/00000001/TBC01.jpg").should be_nil
+        
+        @table.find(:first, "id" => 30, "IMAGE" => "graphics/00000001/TBC01.jpg").should be_nil
       end
     end
   end
 
+  if index_mode == "with_index" 
+    describe "with non-unique index" do
+      before do
+        @table = DBF::Table.new "#{DB_PATH}/dbase_83.dbf"
+        @table.add_index(["catcount"])
+      end
+      
+      it "should raise a non-implemented error" do
+        expect {@table.find(:first, "catcount" => 3)}.to raise_error DBF::Table::NotYetImplementedError
+      end
+
+      it "should not affect other indexes" do
+        @table.find(:first, "catcount" => 3, "IMAGE" => "graphics/00000001/TBC01.jpg").should_not be_nil
+      end
+    end
+  end
+  
   describe "filename" do
     before do
       @table = DBF::Table.new "#{DB_PATH}/dbase_03.dbf"
@@ -231,6 +285,9 @@ describe DBF::Table do
       @table.columns[29].original_name.should == 'Easting'
       @table.columns[29].name.should          == 'easting'
     end
+  end
+  
+  end
   end
 end
 
