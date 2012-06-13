@@ -24,6 +24,7 @@ end
 module DBF
   class WriTable < Table
     class InitError < StandardError; end
+    class MissingStructureError < StandardError; end
     
     def initialize(file_name_or_stringio, column_defs = nil)
       # if file_name_or_stringio
@@ -33,6 +34,7 @@ module DBF
       if @initial_data_present
         get_header_info 
       else
+        @version = "03"
         @total_record_count = 0
       end
       @column_defs = column_defs
@@ -52,6 +54,10 @@ module DBF
         raise "File name expected, got #{file_name_or_stringio.inspect}" unless file_name_or_stringio.respond_to?(:upcase)
         File.open(file_name_or_stringio, "w+b")
       end      
+    end
+    
+    def has_structure?
+      !!(@column_defs || @header_length)
     end
     
     def write(records, column_defs = nil)
@@ -85,17 +91,33 @@ module DBF
       finish
     end
     
+    def close
+      @data.close
+    end
+
+    def column_defs=(cdefs)
+      if cdefs
+        store_column_defs cdefs
+      end
+      @column_defs = cdefs
+    end
+    
+  private    
     def store_column_defs(column_defs = nil)
       column_defs ||= @column_defs 
       @columns = if column_defs.nil?
-        columns        
+        if @initial_data_present
+          columns        
+        else
+          raise MissingStructureError, "Cannot write without any column definition"
+        end
         # Todo: raise better error  if no columns
       else
         column_defs.map do |f| 
-          if f.is_a? Column::Dbase
+          if f.is_a? Column::Base
             f
           else
-            Column::Dbase.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
+            column_class.new(f[:field_name], f[:field_type], f[:field_size], f[:decimals], 3)
           end
         end
       end
@@ -157,9 +179,6 @@ module DBF
 #      end
     end
     
-    def close
-      @data.close
-    end
   end
 end
 

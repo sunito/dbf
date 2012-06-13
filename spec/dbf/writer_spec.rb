@@ -57,8 +57,19 @@ module DBF
  
     end
 
+    it "should know about its missing structure non-existing file" do
+      @writer = WriTable.new(@dbf_file_name)
+      @writer.has_structure?.should be_false
+
+      expect {@writer.write(@records)}.to raise_error WriTable::MissingStructureError
+      @writer.close
+
+      File.read(@dbf_file_name).should == ""
+    end
+
     it "should create a non-existing dbf-file" do
       @writer = WriTable.new(@dbf_file_name, @fields)
+      @writer.has_structure?.should be_true
  
       @writer.write(@records)
       @writer.close
@@ -68,6 +79,7 @@ module DBF
       
     it "should not produce errors with a non-existing file" do
       @writer = WriTable.new(@dbf_file_name, @fields)
+      @writer.has_structure?.should be_true
  
       @writer.find(:first, :LOCNAME=>'Blabla').should be_nil
       @writer.close
@@ -77,6 +89,7 @@ module DBF
       FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
       
       @writer = WriTable.new(@dbf_file_name)
+      @writer.has_structure?.should be_true
       @writer.write(@records)
       @writer.close
 
