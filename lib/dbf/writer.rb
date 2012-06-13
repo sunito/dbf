@@ -66,7 +66,11 @@ module DBF
       @record_count = records.size
       write_header
       
-      records.each do |record|
+      records.each_with_index do |record, idx|
+        next unless record
+        
+        seek(idx * @record_length)
+        
         @data.write(' ')
 
         @columns.each do |c|
@@ -100,6 +104,17 @@ module DBF
         store_column_defs cdefs
       end
       @column_defs = cdefs
+    end
+    
+    def save
+      write(@records)
+      @saved = true
+    end
+    
+    # now cached
+    def record(idx)
+      @records ||= []
+      @records[idx] ||= super
     end
     
   private    
