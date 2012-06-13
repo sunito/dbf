@@ -78,7 +78,7 @@ module DBF
       File.basename @data.path
     end
     
-    # Will enable index-enhanced find operations
+    # Will enable id-enhanced find operations
     # 
     # @param [Array] keys
     def add_index(keys)
@@ -112,14 +112,14 @@ module DBF
     end
         
     
-    # Retrieve a record by index number.
+    # Retrieve a record by id number.
     # The record will be nil if it has been deleted, but not yet pruned from
     # the database.
     #
-    # @param [Fixnum] index
+    # @param [Fixnum] id
     # @return [DBF::Record, NilClass]
-    def record(index)
-      record_active?(index) do |raw_data|
+    def record(id)
+      record_active?(id) do |raw_data|
         DBF::Record.new(raw_data, columns, version, @memo)
       end
     end
@@ -188,7 +188,7 @@ module DBF
     #   # Find first record
     #   table.find :first, :first_name => "Keith"
     #
-    # The <b>command</b> may be a record index, :all, or :first.
+    # The <b>command</b> may be a record id, :all, or :first.
     # <b>options</b> is optional and, if specified, should be a hash where the keys correspond
     # to column names in the database.  The values will be matched exactly with the value
     # in the database.  If you specify more than one key, all values must match in order
@@ -328,8 +328,8 @@ module DBF
       key_names.map { |name| record[name.strip.downcase] }.join("\n")
     end
     
-    def record_active?(index) #nodoc
-      seek(index * @record_length)
+    def record_active?(id) #nodoc
+      seek(id * @record_length)
       if @data.read(1).unpack('a') == ['*'] # deletion marker
         nil
       else
@@ -341,8 +341,8 @@ module DBF
       end
     end
 
-#    def deleted_record?(index) #nodoc
-#      seek(index * @record_length)
+#    def deleted_record?(id) #nodoc
+#      seek(id * @record_length)
 #      @data.read(1).unpack('a') == ['*']
 #    end
 
