@@ -83,7 +83,7 @@ module DBF
           else
             value = value.to_s[0,c.length].ljust(c.length, ' ')
           end
-          value = Iconv.iconv('CP1250', 'UTF-8', value).join
+          value = Iconv.new('CP1250', 'UTF-8').iconv(value)
 
           if value.length != c.length
             raise "Record too long"
