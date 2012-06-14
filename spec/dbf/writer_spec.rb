@@ -8,6 +8,7 @@ module DBF
   describe WriTable do
     before(:all) do
       @dbf_file_name = "#{File.dirname(File.dirname(__FILE__))}/tmp/proba.dbf"      
+      @dbf2_file_name = "#{File.dirname(File.dirname(__FILE__))}/tmp/probb.dbf"      
       @fixt_dbf_simple1_fn = "#{File.dirname(File.dirname(__FILE__))}/fixtures/writer/simple1_6fields3records.dbf"
       @fixt_dbf_simple1_content = File.read(@fixt_dbf_simple1_fn)
       t = Time.now
@@ -105,6 +106,25 @@ module DBF
       @writer.close
 
       File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
+    end
+
+    it "should copy the same values that it has read" do
+      File.delete(@dbf2_file_name) if File.exist?(@dbf2_file_name)
+      
+      FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
+      
+      @source = WriTable.new(@dbf_file_name)
+      recs = @source.find(:all)
+      
+      @writer = WriTable.new(@dbf2_file_name)
+      @writer.column_defs = @source.columns
+      recs.each do |rec|
+        @writer.add_record(rec)
+      end
+      @writer.save
+      @writer.close
+
+      File.read(@dbf2_file_name).should == @fixt_dbf_simple1_content
     end
 
     it "should correctly write modified records" do

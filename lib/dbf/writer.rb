@@ -29,7 +29,7 @@ module DBF
     def initialize(file_name_or_stringio, column_defs = nil)
       # if file_name_or_stringio
       
-      @data = init_data(file_name_or_stringio)
+      init_data(file_name_or_stringio)
       
       if @initial_data_present
         get_header_info 
@@ -39,10 +39,11 @@ module DBF
       end
       @column_defs = column_defs
             
+      @records = []
     end
     
     def init_data(file_name_or_stringio)      
-      if file_name_or_stringio.is_a?(StringIO) 
+      @data = if file_name_or_stringio.is_a?(StringIO) 
         @initial_data_present = true
         file_name_or_stringio
       elsif File.exist?(file_name_or_stringio)
@@ -54,6 +55,7 @@ module DBF
         raise "File name expected, got #{file_name_or_stringio.inspect}" unless file_name_or_stringio.respond_to?(:upcase)
         File.open(file_name_or_stringio, "w+b")
       end      
+      @initial_data_present = false if @data.eof?
     end
     
     def has_structure?
@@ -77,11 +79,11 @@ module DBF
           value = record[c.name.to_sym]
 
           if c.type == 'N'
-            value = Iconv.conv('CP1250', 'UTF-8', value.to_s.rjust(c.length, ' '))
+            value = value.to_s.rjust(c.length, ' ')
           else
-            value = Iconv.conv('CP1250', 'UTF-8', value.to_s[0,c.length].ljust(c.length, ' '))
+            value = value.to_s[0,c.length].ljust(c.length, ' ')
           end
-
+          value = Iconv.iconv('CP1250', 'UTF-8', value).join
 
           if value.length != c.length
             raise "Record too long"
@@ -111,9 +113,18 @@ module DBF
       @saved = true
     end
     
+    def add_record(attributes={})
+      attributes = attributes.attributes if attributes.respond_to?:attributes
+      new_rec = (@record_class||Record).new("", columns, version, false)
+      @records[@total_record_count] = new_rec
+      new_rec.send(:instance_variable_set, :@attributes, attributes)
+      @total_record_count += 1
+      @saved = false
+      new_rec
+    end
+    
     # now cached
     def record(idx)
-      @records ||= []
       @records[idx] ||= super
     end
     
@@ -147,7 +158,7 @@ module DBF
 
       fixed_header_size = 32
       @header_length = DBF_HEADER_SIZE + @column_count * 32 + 1     # The length of the header
-      @record_length = 1 + @columns.sum(&:length)
+      @record_length = 1 + @columns.sum{|c|c.length}
       #@encoding_key 
       #@encoding = ENCODINGS[@encoding_key] if supports_encoding?
       
