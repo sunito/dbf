@@ -110,6 +110,7 @@ module DBF
     
     def save
       write(@records)
+      @data.flush
       @saved = true
     end
     
