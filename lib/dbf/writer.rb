@@ -118,7 +118,7 @@ module DBF
       attributes = attributes.attributes if attributes.respond_to?:attributes
       new_rec = (@record_class||Record).new("", columns, version, false)
       @records[@total_record_count] = new_rec
-      new_rec.send(:instance_variable_set, :@attributes, attributes.dup)
+      new_rec.instance_variable_set( :@attributes, attributes.dup)
       @total_record_count += 1
       @saved = false
       new_rec
