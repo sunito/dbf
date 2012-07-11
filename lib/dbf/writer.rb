@@ -22,6 +22,21 @@ end
 
 
 module DBF
+  
+  # monkeypatching, sorry...
+  class Record
+    def method_missing(method, *args)
+      method_name = method.to_s
+      if index = column_names.index(method_name)
+        attributes[@columns[index].underscored_name]
+      elsif  method_name =~ /=$/ and index = column_names.index(method_name.chop)
+        attributes[@columns[index].underscored_name] = args.first
+      else
+        super
+      end
+    end    
+  end
+  
   class WriTable < Table
     class InitError < StandardError; end
     class MissingStructureError < StandardError; end
