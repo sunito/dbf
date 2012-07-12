@@ -113,7 +113,8 @@ module DBF
     end
     
     def close
-      @data.close
+      save
+      @data.close && @data.closed?
     end
 
     def column_defs=(cdefs)
