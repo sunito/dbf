@@ -67,12 +67,13 @@ module DBF
       end
     end
 
-    private
 
     def column_names
       @column_names ||= @columns.map {|column| column.underscored_name}
     end
     
+    private
+
     def original_column_names
       @original_column_names ||= @columns.map {|column| column.original_name}
     end
