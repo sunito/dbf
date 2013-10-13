@@ -1,9 +1,9 @@
 require 'date'
 
-require 'csv'
-if CSV.const_defined? :Reader
-  require 'fastercsv'
-end
+# require 'csv'
+# if CSV.const_defined? :Reader
+#   require 'fastercsv'
+# end
 
 require 'dbf/record'
 require 'dbf/column/base'
