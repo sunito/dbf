@@ -1,5 +1,10 @@
 # DBF [![Build Status](https://secure.travis-ci.org/infused/dbf.png)](http://travis-ci.org/infused/dbf)
 
+This is a dbf fork to achieve write support.
+Some of it is already working....
+
+-------------
+
 DBF is a small fast library for reading dBase, xBase, Clipper and FoxPro
 database files
 
