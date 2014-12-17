@@ -59,42 +59,42 @@ module DBF
     end
 
     it "should know about its missing structure non-existing file" do
-      @writer = WriTable.new(@dbf_file_name)
-      @writer.has_structure?.should be_false
+      @writable = WriTable.new(@dbf_file_name)
+      @writable.has_structure?.should be_false
 
-      expect {@writer.write(@records)}.to raise_error WriTable::MissingStructureError
-      @writer.close
+      expect {@writable.write(@records)}.to raise_error WriTable::MissingStructureError
+      @writable.close
 
       File.read(@dbf_file_name).should == ""
     end
 
     it "should create a non-existing dbf-file" do
-      @writer = WriTable.new(@dbf_file_name, @fields)
-      @writer.has_structure?.should be_true
+      @writable = WriTable.new(@dbf_file_name, @fields)
+      @writable.has_structure?.should be_true
 
       @records.each do |r|
-        @writer.add_record(Hash[*r.map{|k,v| [k.to_s.downcase,v]}.flatten])
+        @writable.add_record(Hash[*r.map{|k,v| [k.to_s.downcase,v]}.flatten])
       end
-      @writer.close
+      @writable.close
 
       File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
     end
 
     it "should not produce errors with a non-existing file" do
-      @writer = WriTable.new(@dbf_file_name, @fields)
-      @writer.has_structure?.should be_true
+      @writable = WriTable.new(@dbf_file_name, @fields)
+      @writable.has_structure?.should be_true
 
-      @writer.find(:first, :LOCNAME=>'Blabla').should be_nil
-      @writer.close
+      @writable.find(:first, :LOCNAME=>'Blabla').should be_nil
+      @writable.close
     end
 
     it "should be able to read columns from an existing file" do
       FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
 
-      @writer = WriTable.new(@dbf_file_name)
-      @writer.has_structure?.should be_true
-      @writer.write(@records)
-      @writer.close
+      @writable = WriTable.new(@dbf_file_name)
+      @writable.has_structure?.should be_true
+      @writable.write(@records)
+      @writable.close
 
       File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
     end
@@ -102,10 +102,10 @@ module DBF
     it "should write the same values that it has read" do
       FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
 
-      @writer = WriTable.new(@dbf_file_name)
-      recs = @writer.find(:all)
-      @writer.write(recs)
-      @writer.close
+      @writable = WriTable.new(@dbf_file_name)
+      recs = @writable.find(:all)
+      @writable.write(recs)
+      @writable.close
 
       File.read(@dbf_file_name).should == @fixt_dbf_simple1_content
     end
@@ -118,13 +118,13 @@ module DBF
       @source = WriTable.new(@dbf_file_name)
       recs = @source.find(:all)
 
-      @writer = WriTable.new(@dbf2_file_name)
-      @writer.column_defs = @source.columns
+      @writable = WriTable.new(@dbf2_file_name)
+      @writable.column_defs = @source.columns
       recs.each do |rec|
-        @writer.add_record(rec)
+        @writable.add_record(rec)
       end
-      @writer.save
-      @writer.close
+      @writable.save
+      @writable.close
 
       @source.close
 
@@ -134,11 +134,11 @@ module DBF
     it "should correctly write modified records" do
       FileUtils.copy @fixt_dbf_simple1_fn, @dbf_file_name
 
-      @writer = WriTable.new(@dbf_file_name)
-      recs = @writer.find(:all)
+      @writable = WriTable.new(@dbf_file_name)
+      recs = @writable.find(:all)
       recs[0].attributes["locid"] = 44
-      @writer.write(recs)
-      @writer.close
+      @writable.write(recs)
+      @writable.close
 
       File.read(@dbf_file_name).should == @fixt_dbf_simple1_content.sub(" 1My Place", "44My Place")
     end
