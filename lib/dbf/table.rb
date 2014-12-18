@@ -4,7 +4,7 @@ module DBF
   # methods for enumerating and searching the records.
   class Table
     include Enumerable
-    
+
     class InvalidHeader < StandardError; end
     class NotYetImplementedError < StandardError; end
 
@@ -26,7 +26,7 @@ module DBF
       "f5" => "FoxPro with memo file",
       "fb" => "FoxPro without memo file"
     }
-    
+
     FOXPRO_VERSIONS = {
       "30" => "Visual FoxPro",
       "31" => "Visual FoxPro with AutoIncrement field",
@@ -58,8 +58,9 @@ module DBF
       @data = open_data(data)
       get_header_info
       @memo = open_memo(data, memo)
+      @indexes = {}
     end
-    
+
     # @return [TrueClass, FalseClass]
     def has_memo_file?
       !!@memo
@@ -72,21 +73,20 @@ module DBF
       @memo && @memo.close
       @data.close && @data.closed?
     end
-    
+
     # @return String
     def filename
       File.basename @data.path
     end
-    
+
     # Will enable index-enhanced find operations
-    # 
+    #
     # @param [Array] keys
     def add_index(keys)
       keys_unikey = array_to_unikey(keys)
-      @indexes ||= {}
       @indexes[keys_unikey] = Hash.new
     end
-    
+
     # Calls block once for each record in the table. The record may be nil
     # if the record has been marked as deleted.
     #
@@ -96,22 +96,22 @@ module DBF
     end
 
     # the number of active (not deleted) records
-    # 
+    #
     # @return Integer
     def record_count
       @total_record_count - deleted_record_count
     end
-    
+
     # the number of active (not deleted) records
-    # 
+    #
     # @return Integer
     def deleted_record_count
       @deleted_record_count ||= (0...@total_record_count).inject(0) do |c, i|
         record_active?(i) ? c : c+1
       end
     end
-        
-    
+
+
     # Retrieve a record by idx number.
     # The record will be nil if it has been deleted, but not yet pruned from
     # the database.
@@ -226,17 +226,17 @@ module DBF
         columns
       end
     end
-    
+
     def supports_encoding?
       String.new.respond_to? :encoding
     end
-    
+
     def foxpro?
       FOXPRO_VERSIONS.keys.include? @version
     end
 
     private
-    
+
     def column_class #nodoc
       @column_class ||= if foxpro?
         Column::Foxpro
@@ -244,7 +244,7 @@ module DBF
         Column::Dbase
       end
     end
-    
+
     def memo_class #nodoc
       @memo_class ||= if foxpro?
         Memo::Foxpro
@@ -256,7 +256,7 @@ module DBF
         end
       end
     end
-    
+
     def column_count #nodoc
       @column_count ||= ((@header_length - DBF_HEADER_SIZE + 1) / DBF_HEADER_SIZE).to_i
     end
@@ -290,29 +290,33 @@ module DBF
     end
 
     def find_first(options) #nodoc
-      if @indexes         
-        index_unikey = array_to_unikey(options.keys)
-        record_index = @indexes[index_unikey]
-        if record_index 
-          fill_index(index_unikey) if record_index.empty?
-          return record_index[hash_to_unikey(options)]
-        end
-      end
-      detect {|record| record && record.match?(options)}
-    end
-    
-    def fill_index(index_unikey)
+      index_unikey = array_to_unikey(options.keys)
       record_index = @indexes[index_unikey]
+      if record_index
+        fill_index(index_unikey) if record_index.empty?
+        # look it up in the index
+        record_index[hash_to_unikey(options)]
+      else
+        # walk through each record
+        detect {|record| record && record.match?(options)}
+      end
+    end
+
+    def fill_index(index_unikey)
       each do |record|
         next unless record
-        unikey = record_to_unikey(index_unikey, record)            
-        if record_index.has_key?(unikey)
-          raise NotYetImplementedError, "index currently only implemented for unique keys (index: #{record_index}, keyval: #{unikey}"
-        end
-        record_index[unikey] = record
+        add_to_index(index_unikey, record)
       end
-    end          
+    end
 
+    def add_to_index(index_unikey, record)
+      record_index = @indexes[index_unikey]
+      unikey = record_to_unikey(index_unikey, record)
+      if record_index.has_key?(unikey)
+        raise NotYetImplementedError, "index currently only implemented for unique keys (index: #{record_index}, keyval: #{unikey}"
+      end
+      record_index[unikey] = record
+    end
 
     def array_to_unikey(array)
       array.map{|k|k.to_s.downcase}.sort.join("\n")
@@ -324,10 +328,10 @@ module DBF
     end
 
     def record_to_unikey(key_names, record)
-      key_names = key_names.split unless key_names.respond_to?(:map)       
+      key_names = key_names.split unless key_names.respond_to?(:map)
       key_names.map { |name| record[name.strip.downcase] }.join("\n")
     end
-    
+
     def record_active?(idx) #nodoc
       seek(idx * @record_length)
       if @data.read(1).unpack('a') == ['*'] # deletion marker
@@ -351,9 +355,9 @@ module DBF
       @version, @total_record_count, @header_length, @record_length, @encoding_key = read_header
       @encoding = ENCODINGS[@encoding_key] if supports_encoding?
     end
-    
+
     def read_header #nodoc
-      if @data.eof? 
+      if @data.eof?
         raise InvalidHeader, "Missing table header"
       end
       begin

@@ -54,6 +54,7 @@ module DBF
       end
       @column_defs = column_defs
 
+      @indexes = {}
       @records = []
     end
 
@@ -133,10 +134,12 @@ module DBF
 
     def add_record(attributes={})
       attributes = attributes.attributes if attributes.respond_to?:attributes
-      p attributes
       new_rec = (@record_class||Record).new("", columns, version, false)
       @records[@total_record_count] = new_rec
       new_rec.instance_variable_set( :@attributes, attributes.dup)
+      @indexes.keys.each do |index_unikey|
+        add_to_index(index_unikey, new_rec)
+      end
       @total_record_count += 1
       @saved = false
       new_rec
@@ -152,7 +155,8 @@ module DBF
         if @initial_data_present
           super
         else
-          raise MissingStructureError, "Column information needed."
+          source_info = ("file name: #{@data.path}" rescue "from string")
+          raise MissingStructureError, "Column information needed (#{source_info})"
         end
         # Todo: raise better error  if no columns
       else
