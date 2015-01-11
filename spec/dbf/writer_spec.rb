@@ -1,5 +1,5 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
+# ToDo: It seems that specs fail when run for the first time --> check this!
+# ToDo: specs for tables that have not yet been written
 
 require File.expand_path('../../../lib/dbf', __FILE__)
 require File.expand_path('../../../lib/dbf/writer', __FILE__)

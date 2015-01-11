@@ -258,7 +258,7 @@ module DBF
     end
 
     def column_count #nodoc
-      @column_count ||= ((@header_length - DBF_HEADER_SIZE + 1) / DBF_HEADER_SIZE).to_i
+      @column_count ||= ((header_length - DBF_HEADER_SIZE + 1) / DBF_HEADER_SIZE).to_i
     end
 
     def open_data(data) #nodoc
@@ -333,17 +333,19 @@ module DBF
     end
 
     def record_active?(idx) #nodoc
-      seek(idx * @record_length)
+      seek(idx * record_length)
       if @data.read(1).unpack('a') == ['*'] # deletion marker
         nil
       else
         if block_given?
-          yield @data.read(@record_length)
+          yield @data.read(record_length)
         else
           true
         end
       end
     end
+
+    attr_reader :record_length, :header_length
 
 #    def deleted_record?(idx) #nodoc
 #      seek(idx * @record_length)
@@ -368,7 +370,7 @@ module DBF
     end
 
     def seek(offset) #nodoc
-      @data.seek @header_length + offset
+      @data.seek header_length + offset
     end
 
     def csv_class #nodoc

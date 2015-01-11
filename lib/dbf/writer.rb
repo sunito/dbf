@@ -74,9 +74,16 @@ module DBF
       @initial_data_present = false if @data.eof?
     end
 
+    def has_file?
+      !!(@initial_data_present || @has_been_written)
+    end
+
     def has_structure?
       !!(@column_defs || @initial_data_present)
     end
+
+    # writes only records that are
+    
 
     def write(records, column_defs = nil)
 
@@ -88,7 +95,7 @@ module DBF
       records.each_with_index do |record, idx|
         next unless record
 
-        seek(idx * @record_length)
+        seek(idx * record_length)
 
         @data.write(' ')
 
@@ -112,6 +119,8 @@ module DBF
         end # fields.each
       end
       finish
+      @deleted_record_count = nil # could be optimized
+      @has_been_written = true
     end
 
     def close
@@ -175,14 +184,31 @@ module DBF
       @columns.size
     end
 
+    def deleted_record_count
+      if has_file?
+        super
+      else
+        0
+      end
+    end
+
+  protected
+    def record_length
+      @record_length ||= 1 + columns.sum{|c|c.length}
+    end
+
+    # The length of the dbf file header
+    def header_length
+      @header_length ||= DBF_HEADER_SIZE + columns.size * 32 + 1
+    end
+
   private
 
     def write_header  #(record_count)
       @version = 3
 
       fixed_header_size = 32
-      @header_length = DBF_HEADER_SIZE + columns.size * 32 + 1     # The length of the header
-      @record_length = 1 + columns.sum{|c|c.length}
+      
       #@encoding_key
       #@encoding = ENCODINGS[@encoding_key] if supports_encoding?
 
@@ -195,8 +221,8 @@ module DBF
       header << now.month                                 # Month
       header << now.day                                   # Day
       header << @record_count                            # Number of records
-      header << @header_length
-      header << @record_length                           # The length of each record
+      header << header_length
+      header << record_length                           # The length of each record
 
       hdr = header.pack('CCCCVvvxxxxxxxxxxxxxxxxxxxx')
 
