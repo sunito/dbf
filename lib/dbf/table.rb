@@ -313,7 +313,7 @@ module DBF
       record_index = @indexes[index_unikey]
       unikey = record_to_unikey(index_unikey, record)
       if record_index.has_key?(unikey)
-        raise NotYetImplementedError, "index currently only implemented for unique keys (index: #{record_index}, keyval: #{unikey}"
+        raise NotYetImplementedError, "index currently only implemented for unique keys (index: #{index_unikey.inspect}, keyval: #{unikey.inspect}"
       end
       record_index[unikey] = record
     end
