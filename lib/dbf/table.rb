@@ -59,6 +59,7 @@ module DBF
       get_header_info
       @memo = open_memo(data, memo)
       @indexes = {}
+      # no Hash.new construction needed, because of Table#add_index:  {|hash,key| hash[key]=Hash.new{|h,k| h[k]=[] } } # default value is always a fresh Hash whose default value is always a fresh Array
     end
 
     # @return [TrueClass, FalseClass]
@@ -84,7 +85,7 @@ module DBF
     # @param [Array] keys
     def add_index(keys)
       keys_unikey = array_to_unikey(keys)
-      @indexes[keys_unikey] = Hash.new
+      @indexes[keys_unikey] = Hash.new{|h,k| h[k]=[] }  # default value is always a fresh Array
     end
 
     # Calls block once for each record in the table. The record may be nil
@@ -295,7 +296,7 @@ module DBF
       if record_index
         fill_index(index_unikey) if record_index.empty?
         # look it up in the index
-        record_index[hash_to_unikey(options)]
+        record_index[hash_to_unikey(options)].first
       else
         # walk through each record
         detect {|record| record && record.match?(options)}
@@ -312,10 +313,10 @@ module DBF
     def add_to_index(index_unikey, record)
       record_index = @indexes[index_unikey]
       unikey = record_to_unikey(index_unikey, record)
-      if record_index.has_key?(unikey)
-        raise NotYetImplementedError, "index currently only implemented for unique keys (index: #{index_unikey.inspect}, keyval: #{unikey.inspect}"
-      end
-      record_index[unikey] = record
+      #if record_index.has_key?(unikey)
+      #  raise NotYetImplementedError, "index currently only implemented for unique keys (index: #{index_unikey.inspect}, keyval: #{unikey.inspect}"
+      #end
+      record_index[unikey] << record
     end
 
     def array_to_unikey(array)
