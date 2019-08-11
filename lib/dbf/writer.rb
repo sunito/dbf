@@ -233,7 +233,7 @@ module DBF
       columns.each do |c|
         field = Array.new
         field << c.original_name.ljust(11, "\x00")
-        field << c.type[0]
+        field << c.type[0,1].ord
         field << c.length
         field << c.decimal
         fld = field.pack('a11cxxxxCCxxxxxxxxxxxxxx')
